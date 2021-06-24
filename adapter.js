@@ -1,124 +1,196 @@
-// deno-lint-ignore-file no-unused-vars
+import { Buffer, crocks, R, readAll } from "./deps.js";
+
+import * as lib from "./lib/s3.js";
+
+import { mapErr } from "./lib/utils.js";
+
+const { Async } = crocks;
+const { always, compose, prop, map, identity, path } = R;
 
 /**
  *
- * @typedef {Object} CreateDocumentArgs
- * @property {string} db
- * @property {string} id
- * @property {object} doc
+ * @typedef {Object} PutObjectArgs
+ * @property {string} bucket
+ * @property {string} object
+ * @property {any} stream
  *
- * @typedef {Object} RetrieveDocumentArgs
- * @property {string} db
- * @property {string} id
+ * @typedef {Object} ObjectArgs
+ * @property {string} bucket
+ * @property {string} object
  *
- * @typedef {Object} QueryDocumentsArgs
- * @property {string} db
- * @property {QueryArgs} query
+ * @typedef {Object} ListObjectsArgs
+ * @property {string} bucket
+ * @property {string} [prefix]
  *
- * @typedef {Object} QueryArgs
- * @property {object} selector
- * @property {string[]} fields
- * @property {number} limit
- * @property {object[]} sort
- * @property {string} use_index
+ * @typedef {Object} Msg
+ * @property {string} [msg]
  *
- * @typedef {Object} IndexDocumentArgs
- * @property {string} db
- * @property {string} name
- * @property {string[]} fields
+ * @typedef {Object} Buckets
+ * @property {string[]} buckets
  *
- * @typedef {Object} ListDocumentArgs
- * @property {string} db
- * @property {number} limit
- * @property {string} startkey
- * @property {string} endkey
- * @property {string[]} keys
+ * @typedef {Object} Objects
+ * @property {string[]} objects
  *
- * @typedef {Object} BulkDocumentsArgs
- * @property {string} db
- * @property {object[]} docs
- *
- * @typedef {Object} Response
+ * @typedef {Object} ResponseOk
  * @property {boolean} ok
+ *
+ * @typedef {Msg & ResponseOk} ResponseMsg
+ * @typedef {Buckets & ResponseOk} ResponseBuckets
+ * @typedef {Objects & ResponseOk} ResponseObjects
  */
 
-export default function (_env) {
-  /**
-   * @param {string} name
-   * @returns {Promise<Response>}
-   */
-  async function createDatabase(name) {}
+const HYPER_BUCKET_PREFIX = "hyper-storage";
+
+/**
+ *
+ * @param {{ s3: any, factory: any }} aws
+ * @returns
+ */
+export default function (bucketPrefix, aws) {
+  const { s3 } = aws;
+
+  const client = {
+    makeBucket: Async.fromPromise(lib.makeBucket(s3)),
+    removeBucket: Async.fromPromise(lib.removeBucket(s3)),
+    listBuckets: Async.fromPromise(lib.listBuckets(s3)),
+    putObject: Async.fromPromise(lib.putObject(s3)),
+    removeObject: Async.fromPromise(lib.removeObject(s3)),
+    getObject: Async.fromPromise(lib.getObject(s3)),
+    listObjects: Async.fromPromise(lib.listObjects(s3)),
+  };
 
   /**
    * @param {string} name
-   * @returns {Promise<Response>}
+   * @returns {Promise<ResponseMsg>}
    */
-  async function removeDatabase(name) {}
+  function makeBucket(name) {
+    return client.makeBucket(`${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${name}`)
+      .bimap(
+        mapErr,
+        identity,
+      ).bimap(
+        (msg) => ({ ok: false, msg }),
+        always({ ok: true }),
+      ).toPromise();
+  }
 
   /**
-   * @param {CreateDocumentArgs}
-   * @returns {Promise<Response>}
+   * @param {string} name
+   * @returns {Promise<ResponseMsg>}
    */
-  async function createDocument({ db, id, doc }) {}
+  function removeBucket(name) {
+    return client.removeBucket(`${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${name}`)
+      .bimap(
+        mapErr,
+        identity,
+      ).bimap(
+        (msg) => ({ ok: false, msg }),
+        always({ ok: true }),
+      ).toPromise();
+  }
 
   /**
-   * @param {RetrieveDocumentArgs}
-   * @returns {Promise<Response>}
+   * @returns {Promise<ResponseBuckets>}
    */
-  async function retrieveDocument({ db, id }) {}
+  function listBuckets() {
+    return client.listBuckets()
+      .bimap(
+        mapErr,
+        compose(
+          map(prop("Name")),
+          prop("Buckets"),
+        ),
+      ).bimap(
+        (msg) => ({ ok: false, msg }),
+        (bucketNamesArr) => ({ ok: true, buckets: bucketNamesArr }),
+      ).toPromise();
+  }
 
   /**
-   * @param {CreateDocumentArgs}
-   * @returns {Promise<Response>}
+   * @param {PutObjectArgs}
+   * @returns {Promise<ResponseOk>}
    */
-  async function updateDocument({ db, id, doc }) {}
+  async function putObject({ bucket, object, stream }) {
+    const arrBuffer = await readAll(stream);
+
+    return client.putObject({
+      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      key: object,
+      body: arrBuffer,
+    })
+      .bimap(
+        mapErr,
+        identity,
+      ).bimap(
+        (msg) => ({ ok: false, msg }),
+        always({ ok: true }),
+      ).toPromise();
+  }
 
   /**
-   * @param {RetrieveDocumentArgs}
-   * @returns {Promise<Response>}
+   * @param {ObjectArgs}
+   * @returns {Promise<ResponseOk>}
    */
-  async function removeDocument({ db, id }) {}
+  function removeObject({ bucket, object }) {
+    return client.removeObject({
+      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      key: object,
+    })
+      .bimap(
+        mapErr,
+        identity,
+      ).bimap(
+        (msg) => ({ ok: false, msg }),
+        always({ ok: true }),
+      ).toPromise();
+  }
 
   /**
-   * @param {QueryDocumentsArgs}
-   * @returns {Promise<Response>}
+   * @param {ObjectArgs}
+   * @returns {Promise<Buffer>}
    */
-  async function queryDocuments({ db, query }) {}
+  function getObject({ bucket, object }) {
+    return client.getObject({
+      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      key: object,
+    })
+      .bimap(
+        mapErr,
+        path(["Body", "buffer"]),
+      ).bimap(
+        (msg) => ({ ok: false, msg }),
+        (arrayBuffer) => new Buffer(arrayBuffer),
+      ).toPromise();
+  }
 
   /**
-   *
-   * @param {IndexDocumentArgs}
-   * @returns {Promise<Response>}
+   * @param {ListObjectsArgs}
+   * @returns {Promise<ResponseObjects>}
    */
-
-  async function indexDocuments({ db, name, fields }) {}
-
-  /**
-   *
-   * @param {ListDocumentArgs}
-   * @returns {Promise<Response>}
-   */
-  async function listDocuments(
-    { db, limit, startkey, endkey, keys, descending },
-  ) {}
-
-  /**
-   *
-   * @param {BulkDocumentsArgs}
-   * @returns {Promise<Response>}
-   */
-  async function bulkDocuments({ db, docs }) {}
+  function listObjects({ bucket, prefix }) {
+    return client.listObjects({
+      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      prefix,
+    })
+      .bimap(
+        mapErr,
+        compose(
+          map(prop("Key")),
+          prop("Contents"),
+        ),
+      ).bimap(
+        (msg) => ({ ok: false, msg }),
+        (objectNamesArr) => ({ ok: true, objects: objectNamesArr }),
+      ).toPromise();
+  }
 
   return Object.freeze({
-    createDatabase,
-    removeDatabase,
-    createDocument,
-    retrieveDocument,
-    updateDocument,
-    removeDocument,
-    queryDocuments,
-    indexDocuments,
-    listDocuments,
-    bulkDocuments,
+    makeBucket,
+    removeBucket,
+    listBuckets,
+    putObject,
+    removeObject,
+    getObject,
+    listObjects,
   });
 }
