@@ -14,3 +14,4 @@ export {
 } from "https://deno.land/std@0.99.0/testing/asserts.ts";
 
 export { rejects, resolves, spy } from "https://deno.land/x/mock@v0.9.5/mod.ts";
+export { cuid } from "https://deno.land/x/cuid@v1.0.0/index.js";
