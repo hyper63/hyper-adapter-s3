@@ -1,10 +1,10 @@
 // Harness deps
-export { default as appOpine } from "https://raw.githubusercontent.com/hyper63/hyper63/main/packages/app-opine/mod.js";
-export { default as core } from "https://raw.githubusercontent.com/hyper63/hyper63/main/packages/core/mod.js";
+export { default as appOpine } from "https://x.nest.land/hyper-app-opine@1.0.0/mod.js";
+export { default as core } from "https://x.nest.land/hyper@1.3.11/mod.js";
 
 // Schema parsing deps
-export { default as validateFactorySchema } from "https://raw.githubusercontent.com/hyper63/hyper63/main/packages/core/utils/plugin-schema.js";
-export { storage as validateStorageAdapterSchema } from "https://raw.githubusercontent.com/hyper63/hyper63/main/packages/port-storage/mod.js";
+export { default as validateFactorySchema } from "https://x.nest.land/hyper@1.3.11/utils/plugin-schema.js";
+export { storage as validateStorageAdapterSchema } from "https://x.nest.land/hyper-port-storage@1.0.2/mod.js";
 
 // std lib deps
 export {
