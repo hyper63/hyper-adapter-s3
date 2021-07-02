@@ -5,7 +5,7 @@
   "description": "Hyper Storage port adapter for aws s3",
   "homepage": "https://github.com/hyper63/hyper-adapter-s3",
   "repo": "https://github.com/hyper63/hyper-adapter-s3",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "unstable": false,
   "unlisted": false,
   "files": [
