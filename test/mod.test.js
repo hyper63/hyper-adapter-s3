@@ -22,7 +22,7 @@ test("load - should use provided credentials", async () => {
   const res = createFactory("foo", {
     awsAccessKeyId: "foo",
     awsSecretKey: "bar",
-    awsRegion: "fizz",
+    region: "fizz",
   }).load();
 
   await res.aws.factory.ensureCredentialsAvailable();
@@ -30,10 +30,47 @@ test("load - should use provided credentials", async () => {
   assert(true);
 });
 
+test("load - should use credentials passed to load", async () => {
+  const res = createFactory("foo").load({
+    awsAccessKeyId: "foo",
+    awsSecretKey: "bar",
+    region: "fizz",
+  });
+
+  await res.aws.factory.ensureCredentialsAvailable();
+  assert(true);
+});
+
+test("load - should merge credentials, preferring those passed to adapter", async () => {
+  const res = createFactory("foo", { awsAccessKeyId: "better-id" }).load({
+    awsAccessKeyId: "foo",
+    awsSecretKey: "bar",
+    region: "fizz",
+  });
+
+  await res.aws.factory.ensureCredentialsAvailable();
+
+  assertEquals(res.awsAccessKeyId, "better-id");
+  assertEquals(res.awsSecretKey, "bar");
+  assertEquals(res.region, "fizz");
+});
+
+test("load - should default the region to us-east-1", async () => {
+  const res = createFactory("foo").load({
+    awsAccessKeyId: "foo",
+    awsSecretKey: "bar",
+  });
+
+  await res.aws.factory.ensureCredentialsAvailable();
+
+  assertEquals(res.region, "us-east-1");
+});
+
 test("link - should return an adapter", () => {
   const factory = createFactory("foo");
-  const adapter = factory.link({ aws: { s3: {} } })();
+  const adapter = factory.link({ prefix: "foo", aws: { s3: {} } })();
 
   assert(adapter);
   assertEquals(typeof adapter, "object");
+  assert(adapter.makeBucket);
 });
