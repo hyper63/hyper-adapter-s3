@@ -8,3 +8,4 @@ export {
 export { S3 } from "https://deno.land/x/aws_api@v0.6.0/services/s3/mod.ts";
 export { readAll } from "https://deno.land/std@0.122.0/streams/conversion.ts";
 export { Buffer } from "https://deno.land/std@0.122.0/io/buffer.ts";
+export { crypto } from "https://deno.land/std@0.122.0/crypto/mod.ts";
