@@ -1,8 +1,6 @@
 import {
   assert,
   assertEquals,
-  rejects,
-  resolves,
   spy,
   validateStorageAdapterSchema,
 } from "../dev_deps.js";
@@ -10,6 +8,9 @@ import {
 import { Buffer } from "../deps.js";
 
 import adapterBuilder from "../adapter.js";
+
+const resolves = (val) => () => Promise.resolve(val);
+const rejects = (val) => () => Promise.reject(val);
 
 // mock client
 const client = {};

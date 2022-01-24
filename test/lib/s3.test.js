@@ -1,4 +1,4 @@
-import { assert, assertObjectMatch, resolves, spy } from "../../dev_deps.js";
+import { assert, assertObjectMatch, spy } from "../../dev_deps.js";
 
 import {
   getObject,
@@ -11,6 +11,8 @@ import {
 } from "../../lib/s3.js";
 
 const { test } = Deno;
+
+const resolves = (val) => () => Promise.resolve(val);
 
 const s3 = {};
 
@@ -47,7 +49,9 @@ test("listBuckets - should pass correct shape", async () => {
 test("putObject - should pass correct shape", async () => {
   const bucket = "buck";
   const key = "foo.jpg";
-  const body = new Uint8Array();
+  // See https://github.com/denoland/deno_std/issues/1842
+  // const body = new Uint8Array();
+  const body = {};
 
   s3.putObject = spy(resolves());
 
