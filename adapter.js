@@ -8,7 +8,6 @@ const { Async } = crocks;
 const { always, compose, prop, map, identity, path } = R;
 
 /**
- *
  * @typedef {Object} PutObjectArgs
  * @property {string} bucket
  * @property {string} object
@@ -42,7 +41,6 @@ const { always, compose, prop, map, identity, path } = R;
 const HYPER_BUCKET_PREFIX = "hyper-storage";
 
 /**
- *
  * @param {{ s3: any, factory: any }} aws
  * @returns
  */
