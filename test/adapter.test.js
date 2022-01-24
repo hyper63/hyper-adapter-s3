@@ -1,13 +1,15 @@
 import {
   assert,
   assertEquals,
+  assertObjectMatch,
   spy,
   validateStorageAdapterSchema,
 } from "../dev_deps.js";
 
 import { Buffer } from "../deps.js";
 
-import adapterBuilder from "../adapter.js";
+import adapterBuilder, { HYPER_BUCKET_PREFIX } from "../adapter.js";
+import { hashBucketName } from "../lib/utils.js";
 
 const resolves = (val) => () => Promise.resolve(val);
 const rejects = (val) => () => Promise.reject(val);
@@ -15,12 +17,25 @@ const rejects = (val) => () => Promise.reject(val);
 // mock client
 const client = {};
 
-const adapter = adapterBuilder("foo", { s3: client });
+const prefix = "foo";
+const adapter = adapterBuilder(prefix, { s3: client });
 
 const { test } = Deno;
 
 test("should implement the port", () => {
   assert(validateStorageAdapterSchema(adapter));
+});
+
+test("should hash the bucket name before passing to s3 client", async () => {
+  const bucket = "bar";
+  client.createBucket = spy(resolves());
+  await adapter.makeBucket(bucket);
+
+  assertObjectMatch(client.createBucket.calls.shift(), {
+    args: [{
+      Bucket: `${HYPER_BUCKET_PREFIX}-${hashBucketName(prefix, bucket)}`,
+    }],
+  });
 });
 
 test("makeBucket - make a bucket and return the correct shape", async () => {

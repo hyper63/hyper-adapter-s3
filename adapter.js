@@ -2,7 +2,7 @@ import { Buffer, crocks, R, readAll } from "./deps.js";
 
 import * as lib from "./lib/s3.js";
 
-import { mapErr } from "./lib/utils.js";
+import { hashBucketName, mapErr } from "./lib/utils.js";
 
 const { Async } = crocks;
 const { always, compose, prop, map, identity, path } = R;
@@ -38,7 +38,11 @@ const { always, compose, prop, map, identity, path } = R;
  * @typedef {Objects & ResponseOk} ResponseObjects
  */
 
-const HYPER_BUCKET_PREFIX = "hyper-storage";
+/**
+ * the hashed name is sha1 which is 40 characters + "hyper-storage-" makes 54,
+ * which falls within the acceptable range of s3 bucket name lengths (3-63)
+ */
+export const HYPER_BUCKET_PREFIX = "hyper-storage";
 
 /**
  * @param {{ s3: any, factory: any }} aws
@@ -62,7 +66,9 @@ export default function (bucketPrefix, aws) {
    * @returns {Promise<ResponseMsg>}
    */
   function makeBucket(name) {
-    return client.makeBucket(`${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${name}`)
+    return client.makeBucket(
+      `${HYPER_BUCKET_PREFIX}-${hashBucketName(bucketPrefix, name)}`,
+    )
       .bimap(
         mapErr,
         identity,
@@ -77,7 +83,9 @@ export default function (bucketPrefix, aws) {
    * @returns {Promise<ResponseMsg>}
    */
   function removeBucket(name) {
-    return client.removeBucket(`${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${name}`)
+    return client.removeBucket(
+      `${HYPER_BUCKET_PREFIX}-${hashBucketName(bucketPrefix, name)}`,
+    )
       .bimap(
         mapErr,
         identity,
@@ -89,6 +97,16 @@ export default function (bucketPrefix, aws) {
 
   /**
    * @returns {Promise<ResponseBuckets>}
+   *
+   * TODO: Tyler. This was broken as part of work to hash
+   * bucket names sent to AWS. This was done
+   * to satisfy https://github.com/hyper63/hyper-adapter-s3/issues/4
+   *
+   * So for now, the names coming back will be the hashes generated. But
+   * this isn't currently used by the hyper app, so shouldn't break hyper proper
+   *
+   * Possible solution: on bucket creation, add a statically named txt file (_metadata.txt) that contains
+   * the actual name, then fetch that file, for each bucket, and extract the name
    */
   function listBuckets() {
     return client.listBuckets()
@@ -112,7 +130,7 @@ export default function (bucketPrefix, aws) {
     const arrBuffer = await readAll(stream);
 
     return client.putObject({
-      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      bucket: `${HYPER_BUCKET_PREFIX}-${hashBucketName(bucketPrefix, bucket)}`,
       key: object,
       body: arrBuffer,
     })
@@ -131,7 +149,7 @@ export default function (bucketPrefix, aws) {
    */
   function removeObject({ bucket, object }) {
     return client.removeObject({
-      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      bucket: `${HYPER_BUCKET_PREFIX}-${hashBucketName(bucketPrefix, bucket)}`,
       key: object,
     })
       .bimap(
@@ -149,7 +167,7 @@ export default function (bucketPrefix, aws) {
    */
   function getObject({ bucket, object }) {
     return client.getObject({
-      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      bucket: `${HYPER_BUCKET_PREFIX}-${hashBucketName(bucketPrefix, bucket)}`,
       key: object,
     })
       .bimap(
@@ -167,7 +185,7 @@ export default function (bucketPrefix, aws) {
    */
   function listObjects({ bucket, prefix }) {
     return client.listObjects({
-      bucket: `${HYPER_BUCKET_PREFIX}-${bucketPrefix}-${bucket}`,
+      bucket: `${HYPER_BUCKET_PREFIX}-${hashBucketName(bucketPrefix, bucket)}`,
       prefix,
     })
       .bimap(
