@@ -1,3 +1,6 @@
+> :warning: This adapter is deprecated and will no longer receive updates. If you're looking for an S3 adapter, then consider using the [hyper Storage MinIO Adapter](https://github.com/hyper63/hyper-adapter-minio)
+ which is up to date, and more flexible and configurable.
+
 <h1 align="center">hyper-adapter-s3</h1>
 <p align="center">A Storage port adapter that uses AWS S3 for object storage in the <a href="https://hyper.io/">hyper</a>  service framework</p>
 </p>
